@@ -1,0 +1,8 @@
+CTRL: start/stop RN
+ALT: mute/unmute sound
+SHIFT: next movie
+UP/DOWN/LEFT/RIGHT ARROW: move the camera capture to the corners
+ESCAPE: exit
+
+SPACE BAR: play/pause movie
+PERSON/NO PERSON: play/pause movie
