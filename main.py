@@ -34,6 +34,40 @@ from win32api import GetSystemMetrics
 import vlc
 import winsound
 
+drawing = False
+x1 = 0
+y1 = 0
+x2 = 0
+y2 = 0
+image_np=0
+
+def on_mouse(event, x, y, flags, params):
+    # global img
+    t = time  
+    frequency = 1000  # Set Frequency
+    duration = 200  # Set Duration To 1000 ms == 1 second
+    global x1,y1,x2,y2,drawing,image_np
+
+    if(event==1):
+          drawing = True
+          x1 = x
+          y1 = y
+          winsound.Beep(frequency, duration)
+    if(event==0):
+          if(drawing==True):
+              #For Drawing Line
+              #cv2.line(image_np,pt1=(ix,iy),pt2=(x,y),color=(255,255,255),thickness=3)
+              # For Drawing Rectangle
+              #recuadro de la toma de video
+              x2 = x
+              y2 = y
+
+              #ix = x
+              #iy = y
+
+    if(event==4):
+          drawing = False
+          winsound.Beep(frequency, duration)
 
 def windowEnumerationHandler(hwnd, top_windows):
     top_windows.append((hwnd, win32gui.GetWindowText(hwnd)))
@@ -149,7 +183,7 @@ class MyFrame(wx.Frame):
 
         self.tiempo1=time.now()
         #ipcamUrl = 'http://admin:admin@192.168.43.1:8081'
-        ipcamUrl = 'http://admin:usher@192.168.0.3:8081'
+        ipcamUrl = 'http://admin:usher@192.168.43.93:8081'
         ipcam = {}
         ipcamDesc = 'Celular'
         ipcam[ipcamDesc] = urlparse(ipcamUrl)
@@ -167,8 +201,9 @@ class MyFrame(wx.Frame):
           self.capture = cv2.VideoCapture(0)
           self.capture.set(3,self.CaptureWidth) #1024 640 1280 800 384
           self.capture.set(4,self.CaptureHeight) #600 480 960 600 288
-          
-        
+          global x2,y2
+          x2=self.CaptureWidth
+          y2=self.CaptureHeight
           sys.path.append("..")
         
           # Importación del módulo de detección de objetos.
@@ -254,6 +289,7 @@ class MyFrame(wx.Frame):
 
               self.camara = "Camera"
               cv2.namedWindow(self.camara, cv2.WINDOW_NORMAL)
+              cv2.setMouseCallback(self.camara, on_mouse, 0)
               cv2.setWindowProperty(self.camara, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
               sleep(0.1)
               cv2.resizeWindow(self.camara, 320,180)
@@ -409,11 +445,13 @@ class MyFrame(wx.Frame):
         else:
           print("Falló la captura")
           exit(1)       
-
-        ret, self.image_np = self.capture.retrieve()
-        height, width, channels = self.image_np.shape
+        
+        global image_np
+        ret, image_np = self.capture.retrieve()
+        height1, width1, channels = image_np.shape
         #cv2.imshow('object detection', self.image_np)
-
+        global x1,y1,x2,y2
+        crop_img = image_np[y1:y2, x1:x2]
         if self.analisis==True:
           if self.FRECUENCIA_CNN==0: 
 
@@ -435,7 +473,7 @@ class MyFrame(wx.Frame):
               #cv2.waitKey(0);
               #import pdb; pdb.set_trace()
               # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
-              image_np_expanded = np.expand_dims(self.image_np, axis=0)
+              image_np_expanded = np.expand_dims(crop_img, axis=0)
 
               # Actual detection.      
               (self.boxes, self.scores, self.classes, self.num) = self.sess.run([self.detection_boxes, self.detection_scores, self.detection_classes, self.num_detections],feed_dict={self.image_tensor: image_np_expanded})
@@ -443,9 +481,9 @@ class MyFrame(wx.Frame):
               
               box = np.squeeze(self.boxes)
               #Alto del frame en pixeles
-              height = np.size(self.image_np, 0)
+              height = np.size(crop_img, 0)
               #Ancho del frame en pixeles
-              width = np.size(self.image_np, 1)
+              width = np.size(crop_img, 1)
               
               ##Comparo cada rectangulo del xml con cada box de la CNN
               ##Si el porcentaje de coincidencia es mayor a PORC_INTERSECCION guardo "[OK] "
@@ -496,7 +534,7 @@ class MyFrame(wx.Frame):
 
               # Visualization of the results of a detection.
               vis_util.visualize_boxes_and_labels_on_image_array(
-              self.image_np,
+              crop_img,
               np.squeeze(self.boxes),
               np.squeeze(self.classes).astype(np.int32),
               np.squeeze(self.scores),
@@ -509,22 +547,28 @@ class MyFrame(wx.Frame):
           else:
               self.FRECUENCIA_CNN-=1
         ###############################################
-        # Visualization of the results of a detection.
-        ''' vis_util.visualize_boxes_and_labels_on_image_array(
-        self.image_np,
-        np.squeeze(self.boxes),
-        np.squeeze(self.classes).astype(np.int32),
-        np.squeeze(self.scores),
-        self.category_index,
-        use_normalized_coordinates=True,
-        max_boxes_to_draw=100,
-        line_thickness=4)'''
+        if self.analisis==True:
+         # Visualization of the results of a detection.
+         vis_util.visualize_boxes_and_labels_on_image_array(
+         crop_img,
+         np.squeeze(self.boxes),
+         np.squeeze(self.classes).astype(np.int32),
+         np.squeeze(self.scores),
+         self.category_index,
+         use_normalized_coordinates=True,
+         max_boxes_to_draw=100,
+         line_thickness=4)
+        
+
 
         #recuadro de la toma de video
-        self.image_np= cv2.rectangle(self.image_np,(0,0),(width,height),(255, 153, 102),20)
+        image_np=cv2.rectangle(image_np,(0,0),(width1,height1),(255, 153, 102),20)
         #self.image_np= cv2.rectangle(self.image_np,(0,0),(width,height),(255,255,255),5)
 
-        cv2.imshow(self.camara,self.image_np)
+        #Dibujo area de analisis
+        image_np=cv2.rectangle(image_np,pt1=(x1,y1),pt2=(x2,y2),color=(255,0,0),thickness=3)
+        
+        cv2.imshow(self.camara,image_np)
 
                       
         #Estado del reproductor
@@ -592,6 +636,8 @@ class MyFrame(wx.Frame):
             state = self.media.get_state()
             if str(state) == 'State.Ended':
                   
+              self.analisis=False
+              self.personasTotales=0
               #Cargo una nueva portada
               #win32gui.ShowWindow(self.portadaPID, win32con.SW_HIDE)
               
@@ -787,6 +833,9 @@ class MyFrame(wx.Frame):
                          )
                 locations_list.append(value)
         return locations_list
+
+
+
     
     #Area de interseccion entre 2 rectangulos
     #Para determinar coincidencia entre las posiciones del xml y las boxes de la CNN
