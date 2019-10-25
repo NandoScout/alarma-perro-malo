@@ -33,41 +33,40 @@ import win32con
 from win32api import GetSystemMetrics
 import vlc
 import winsound
+import random
 
 drawing = False
+mostrarROI=True
 x1 = 0
 y1 = 0
 x2 = 0
 y2 = 0
 image_np=0
 
+
 def on_mouse(event, x, y, flags, params):
     # global img
     t = time  
     frequency = 1000  # Set Frequency
     duration = 200  # Set Duration To 1000 ms == 1 second
-    global x1,y1,x2,y2,drawing,image_np
+    global x1,y1,x2,y2,drawing,image_np,mostrarROI
 
     if(event==1):
           drawing = True
+          mostrarROI=True
           x1 = x
           y1 = y
-          winsound.Beep(frequency, duration)
+         
     if(event==0):
           if(drawing==True):
-              #For Drawing Line
-              #cv2.line(image_np,pt1=(ix,iy),pt2=(x,y),color=(255,255,255),thickness=3)
-              # For Drawing Rectangle
-              #recuadro de la toma de video
               x2 = x
               y2 = y
 
-              #ix = x
-              #iy = y
-
     if(event==4):
           drawing = False
-          winsound.Beep(frequency, duration)
+          
+    if(event==cv2.EVENT_RBUTTONUP):
+      mostrarROI=not mostrarROI
 
 def windowEnumerationHandler(hwnd, top_windows):
     top_windows.append((hwnd, win32gui.GetWindowText(hwnd)))
@@ -75,14 +74,6 @@ def windowEnumerationHandler(hwnd, top_windows):
 # Importación del módulo de detección de objetos.
 from object_detection.utils import label_map_util
 from object_detection.utils import visualization_utils as vis_util
-
-
-# begin wxGlade: dependencies
-# end wxGlade
-
-# begin wxGlade: extracode
-# end wxGlade
-
 
 class MyFrame(wx.Frame):
     def __init__(self, *args, **kwds):
@@ -123,13 +114,20 @@ class MyFrame(wx.Frame):
 
         # end wxGlade
              
-        self.PATH_VIDEOS='videos'
-        lista = [f for f in listdir(self.PATH_VIDEOS) if isfile(join(self.PATH_VIDEOS, f)) and os.path.splitext(join(self.PATH_VIDEOS, f))[1]==".mp4"]
-        self.listaVideos = cycle(lista)
+        self.PATH_VIDEOS_ADULTOS='videos/Adultos'
+        self.listaAdultos = [f for f in listdir(self.PATH_VIDEOS_ADULTOS) if isfile(join(self.PATH_VIDEOS_ADULTOS, f)) and os.path.splitext(join(self.PATH_VIDEOS_ADULTOS, f))[1]==".mp4"]
+        self.listaVideosAdultos = cycle(self.listaAdultos)
+
+        self.PATH_VIDEOS_MENORES='videos/Menores'
+        self.listaMenores = [f for f in listdir(self.PATH_VIDEOS_MENORES) if isfile(join(self.PATH_VIDEOS_MENORES, f)) and os.path.splitext(join(self.PATH_VIDEOS_MENORES, f))[1]==".mp4"]
+        self.listaVideosMenores = cycle(self.listaMenores)
+
         self.personas=0
         self.pause=False
         self.forzarPausa=False
         self.personasTotales=0
+        self.Genero="Adultos"
+        self.MostrarGenero=True
 
         #Create objects
         self.CaptureWidth = 640
@@ -289,6 +287,9 @@ class MyFrame(wx.Frame):
 
               self.camara = "Camera"
               cv2.namedWindow(self.camara, cv2.WINDOW_NORMAL)
+
+              
+
               cv2.setMouseCallback(self.camara, on_mouse, 0)
               cv2.setWindowProperty(self.camara, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
               sleep(0.1)
@@ -333,16 +334,20 @@ class MyFrame(wx.Frame):
               #Oculto la AppPrincipal del escritorio (X,Y,Width,Height)
               sleep(0.1)
               win32gui.ShowWindow(self.appPrincipalPID, win32con.SW_HIDE)
-              
+              self.logostr='imagenes/usher 5.png'
+              self.xyLogo=10
+
               if self.statePlayer == self.STATE_PELICULA:
                 #VLC para las peliculas
                 self.instance = vlc.Instance()
                 self.player = self.instance.media_player_new("Reproductor Peliculas y Portadas")
                 self.player.set_fullscreen(True)
-                pathVideo = os.path.join(self.PATH_VIDEOS, next(self.listaVideos))
+                pathVideo = os.path.join(self.PATH_VIDEOS, next(self.listaVideosAdultos))
                 self.media = self.instance.media_new(pathVideo)
                 self.player.set_media(self.media)  
-                            
+
+    
+
                 self.player.play()   
                 
                 sleep(0.1)
@@ -352,12 +357,17 @@ class MyFrame(wx.Frame):
                 self.media = self.player.get_media()
               else:
                 #VLC para las portadas
-                self.instance = vlc.Instance()
+                self.instance = vlc.Instance("--sub-source logo:marq")
+                
                 self.player = self.instance.media_player_new()
+
+
+
                 self.player.set_fullscreen(True)
                 self.media = self.instance.media_new('imagenes/portada.jpg')
                 self.player.set_media(self.media)
-                
+
+               
                 self.player.play() 
                    
                 sleep(0.1)
@@ -365,8 +375,17 @@ class MyFrame(wx.Frame):
                 self.player.pause() 
                 self.pause=True
                 self.player.set_time(8000)
+
                 self.media = self.player.get_media()
 
+                
+                g = vlc.VideoLogoOption 
+                self.player.video_set_logo_int(g.logo_enable, 1)
+                self.player.video_set_logo_int(g.logo_opacity, 255)  # 0-255               
+                self.player.video_set_logo_string(g.logo_file, self.logostr) 
+                self.player.video_set_logo_int(g.logo_position,6)    
+                self.player.video_set_logo_int(g.logo_x,self.xyLogo)    
+                self.player.video_set_logo_int(g.logo_y,self.xyLogo)         
               
               print("Reproductor inicial:",self.reproductorPID)
 
@@ -559,15 +578,27 @@ class MyFrame(wx.Frame):
          max_boxes_to_draw=100,
          line_thickness=4)
         
-
+        if self.MostrarGenero==True:
+           font = cv2.FONT_HERSHEY_COMPLEX
+           cv2.putText(image_np, self.Genero, (10, 50), font, 1, (255, 255, 255),2)
 
         #recuadro de la toma de video
         image_np=cv2.rectangle(image_np,(0,0),(width1,height1),(255, 153, 102),20)
         #self.image_np= cv2.rectangle(self.image_np,(0,0),(width,height),(255,255,255),5)
 
+        global mostrarROI
         #Dibujo area de analisis
-        image_np=cv2.rectangle(image_np,pt1=(x1,y1),pt2=(x2,y2),color=(255,0,0),thickness=3)
+        if mostrarROI==True:
+          image_np=cv2.rectangle(image_np,pt1=(x1,y1),pt2=(x2,y2),color=(255,0,0),thickness=3)
         
+        if self.statePlayer == self.STATE_PELICULA:
+          font = cv2.FONT_HERSHEY_COMPLEX
+          tTotal=int(self.media.get_duration()/1000)
+          tActual=int(self.player.get_time()/1000)
+          tRegresiva=tTotal-tActual
+          cifras=len(str(tRegresiva))
+          cv2.putText(image_np, str(tRegresiva), (int(width1)-50-50*cifras, height1-50), font, 3, (0, 255, 0),6)
+
         cv2.imshow(self.camara,image_np)
 
                       
@@ -586,10 +617,22 @@ class MyFrame(wx.Frame):
 
               win32gui.ShowWindow(self.reproductorPID, win32con.SW_MAXIMIZE)
               #win32gui.SetForegroundWindow(self.portadaPID)
+              
+              if self.Genero=="Adultos":
+                r=random.randrange(1, len(self.listaAdultos)-1) 
+                for i in range(r):
+                  n= next(self.listaVideosAdultos)
+                pathVideo = os.path.join(self.PATH_VIDEOS_ADULTOS, n)
 
-              pathVideo = os.path.join(self.PATH_VIDEOS, next(self.listaVideos))
+              if self.Genero=="Menores":
+                r=random.randrange(1, len(self.listaMenores)-1) 
+                for i in range(r):
+                  n= next(self.listaVideosMenores)
+                pathVideo = os.path.join(self.PATH_VIDEOS_MENORES, n)             
+
               print("Cargo pelicula:",pathVideo)
               self.media = self.instance.media_new(pathVideo)
+              
 
               self.player.set_media(self.media)
               
@@ -603,6 +646,13 @@ class MyFrame(wx.Frame):
               self.pause=True
               self.media = self.player.get_media()
 
+              g = vlc.VideoLogoOption 
+              self.player.video_set_logo_int(g.logo_enable, 1)
+              self.player.video_set_logo_int(g.logo_opacity, 255)  # 0-255               
+              self.player.video_set_logo_string(g.logo_file, self.logostr) 
+              self.player.video_set_logo_int(g.logo_position,6)
+              self.player.video_set_logo_int(g.logo_x,self.xyLogo)    
+              self.player.video_set_logo_int(g.logo_y,self.xyLogo)  
 
               '''self.reproductorPID=0
               #Obtengo los PID de los vlc
@@ -615,7 +665,6 @@ class MyFrame(wx.Frame):
                     #win32gui.ShowWindow(i[0],5)
                     break
 
-              
               print("Reproductor nuevo buscado:",self.reproductorPID)'''
 
               sleep(0.01)
@@ -656,6 +705,14 @@ class MyFrame(wx.Frame):
               self.player.set_time(8000)
               self.media = self.player.get_media()            
               
+              g = vlc.VideoLogoOption 
+              self.player.video_set_logo_int(g.logo_enable, 1)
+              self.player.video_set_logo_int(g.logo_opacity, 255)  # 0-255               
+              self.player.video_set_logo_string(g.logo_file, self.logostr) 
+              self.player.video_set_logo_int(g.logo_position,6)    
+              self.player.video_set_logo_int(g.logo_x,self.xyLogo)    
+              self.player.video_set_logo_int(g.logo_y,self.xyLogo)   
+
               #sleep(0.1)
               '''self.reproductor=0
               #Obtengo el PID del vlc
@@ -727,6 +784,7 @@ class MyFrame(wx.Frame):
         event.Skip()
         
     def KeyDown(self, event=None):
+      global image_np
       keycode = event.GetKeyCode()
       if keycode == wx.WXK_SPACE:
          self.player.pause()
@@ -747,19 +805,31 @@ class MyFrame(wx.Frame):
       if keycode == wx.WXK_DOWN:
          self.yCamara= self.heightDesktop-self.hCamara
          cv2.moveWindow(self.camara,self.xCamara,self.yCamara)     
+
       if keycode == wx.WXK_ESCAPE:
          self.Close(True)
+
       if keycode == wx.WXK_ALT:
          winsound.Beep(self.frequency, self.duration)
          self.is_mute = self.player.audio_get_mute()
          self.player.audio_set_mute(not self.is_mute)
+
       if keycode == wx.WXK_SHIFT:  
          winsound.Beep(self.frequency, self.duration) 
          self.player.set_time(self.player.get_length())
 
+      if keycode == wx.WXK_F1:  
+         self.MostrarGenero=True
+         self.Genero="Menores"
+
+      if keycode == wx.WXK_F2:  
+         self.MostrarGenero=True
+         self.Genero="Adultos"
+
+      if keycode == wx.WXK_F3:  
+         self.MostrarGenero=not self.MostrarGenero
 
       if keycode == wx.WXK_CONTROL:
-            
          self.analisis=not self.analisis
 
        
@@ -787,15 +857,12 @@ class MyFrame(wx.Frame):
         return        
         
 
-
     #Al hacer click sobre la ventana, cambio el estado de seleccionado False a todas las bancas
     def VentanaClick(self, event): 
         
        #Seteo todas las StaticBitmap des-seleccionadas
        for i in self.screen_list:
          self.dict_bancas[i.getStaticBitmap()].setSeleccionado(False)  
-
-    
 
     def urlTest(self,host, port):
         
@@ -835,8 +902,6 @@ class MyFrame(wx.Frame):
         return locations_list
 
 
-
-    
     #Area de interseccion entre 2 rectangulos
     #Para determinar coincidencia entre las posiciones del xml y las boxes de la CNN
     def area(self,a, b):  # returns None if rectangles don't intersect
@@ -844,6 +909,8 @@ class MyFrame(wx.Frame):
         dy = min(a.ymax, b.ymax) - max(a.ymin, b.ymin)
         if (dx>=0) and (dy>=0):
             return dx*dy
+
+
             
 class MyApp(wx.App):
 
