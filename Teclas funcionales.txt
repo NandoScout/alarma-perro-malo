@@ -1,0 +1,15 @@
+CTRL: start/stop RN
+ALT: mute/unmute sound
+SHIFT: next movie
+UP/DOWN/LEFT/RIGHT ARROW: move the camera capture to the corners
+ESCAPE: exit
+
+SPACE BAR: play/pause movie
+PERSON/NO PERSON: play/pause movie
+
+F1:Genero Menores
+F2:Genero Adultos
+F3:Genero Visible True/False
+
+Click izquierdo: Definir ROI para RN
+Click derecho Visible ROI True/False

@@ -1,0 +1,7 @@
+Tiempo de respuesta:  0:43:17.566572
+Metricas de tiempo:
+Minimo 0.040002 Maximo 1.325076 Promedio 0.06026129250854859
+Metricas de deteccion:
+Minimo 0.500271 Maximo 0.9999807 Promedio 0.9565675513118979 Boxes Promedio 2.43
+81675850965228
+Frames con detecciones: 5712
