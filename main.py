@@ -114,6 +114,7 @@ class MyFrame(wx.Frame):
 
         # end wxGlade
              
+        self.PATH_VIDEOS_TUTORIAL='videos/Tutorial/Tuto.mp4'
         self.PATH_VIDEOS_ADULTOS='videos/Adultos'
         self.listaAdultos = [f for f in listdir(self.PATH_VIDEOS_ADULTOS) if isfile(join(self.PATH_VIDEOS_ADULTOS, f)) and os.path.splitext(join(self.PATH_VIDEOS_ADULTOS, f))[1]==".mp4"]
         self.listaVideosAdultos = cycle(self.listaAdultos)
@@ -127,7 +128,7 @@ class MyFrame(wx.Frame):
         self.forzarPausa=False
         self.personasTotales=0
         self.Genero="Adultos"
-        self.MostrarGenero=True
+        self.MostrarGenero=False
 
         #Create objects
         self.CaptureWidth = 640
@@ -273,7 +274,8 @@ class MyFrame(wx.Frame):
               
               #Estado del reproductor
               self.STATE_PORTADA = 1
-              self.STATE_PELICULA = 2
+              self.STATE_TUTORIAL= 2
+              self.STATE_PELICULA = 3
               self.statePlayer = self.STATE_PORTADA
 
               #Cantidad de ciclos del timer que la CNN no trabaja
@@ -334,7 +336,7 @@ class MyFrame(wx.Frame):
               #Oculto la AppPrincipal del escritorio (X,Y,Width,Height)
               sleep(0.1)
               win32gui.ShowWindow(self.appPrincipalPID, win32con.SW_HIDE)
-              self.logostr='imagenes/usher 5.png'
+              self.logostr='imagenes/usher 5 borde4.png'
               self.xyLogo=10
 
               if self.statePlayer == self.STATE_PELICULA:
@@ -379,14 +381,7 @@ class MyFrame(wx.Frame):
                 self.media = self.player.get_media()
 
                 
-                g = vlc.VideoLogoOption 
-                self.player.video_set_logo_int(g.logo_enable, 1)
-                self.player.video_set_logo_int(g.logo_opacity, 255)  # 0-255               
-                self.player.video_set_logo_string(g.logo_file, self.logostr) 
-                self.player.video_set_logo_int(g.logo_position,6)    
-                self.player.video_set_logo_int(g.logo_x,self.xyLogo)    
-                self.player.video_set_logo_int(g.logo_y,self.xyLogo)         
-              
+             
               print("Reproductor inicial:",self.reproductorPID)
 
               
@@ -404,12 +399,8 @@ class MyFrame(wx.Frame):
 
               print("Reproductor inicial buscado:",self.reproductorPID)
 
-              #exit(1)
-              #win32gui.SetForegroundWindow(self.reproductorPID)
-
-
               win32gui.ShowWindow(self.reproductorPID, win32con.SW_MAXIMIZE)  
-              #win32gui.ShowWindow(self.portadaPID, win32con.SW_MAXIMIZE)
+
 
     def __set_properties(self):
         # begin wxGlade: MyFrame.__set_properties
@@ -475,22 +466,6 @@ class MyFrame(wx.Frame):
           if self.FRECUENCIA_CNN==0: 
 
 
-              #ret, self.image_np = self.capture.retrieve()
-              # EXAMPLE GRAY "cv2.COLOR_BGR2GRAY"
-              # # EXAMPLE HSV "cv2.COLOR_BGR2HSV"
-              # # EXAMPLE RGB ""
-                           
-              #COLOR = cv2.COLOR_BGR2HSV
-              #self.image_np = cv2.cvtColor(self.image_np, COLOR)
-
-              '''COLOR = cv2.COLOR_BGR2GRAY
-              self.image_np = cv2.cvtColor(self.image_np, COLOR)
-              COLOR = cv2.COLOR_GRAY2BGR
-              self.image_np = cv2.cvtColor(self.image_np, COLOR)'''
-               
-              #cv2.imshow( "Display window",self.image_np); 
-              #cv2.waitKey(0);
-              #import pdb; pdb.set_trace()
               # Expand dimensions since the model expects images to have shape: [1, None, None, 3]
               image_np_expanded = np.expand_dims(crop_img, axis=0)
 
@@ -604,133 +579,108 @@ class MyFrame(wx.Frame):
                       
         #Estado del reproductor
         #self.STATE_PORTADA = 1
-        #self.STATE_PELICULA = 2
+        #self.STATE_TUTORIAL = 2
+        #self.STATE_PELICULA = 3
         #self.statePlayer = self.STATE_PORTADA
 
         if self.statePlayer == self.STATE_PORTADA:
-            #Si termina la portada cargo un nuevo video
+            #Si termina la portada cargo video tutorial
             state = self.media.get_state()
             if str(state) == 'State.Ended':
-              #Cargo una nueva pelicula
-
-              winsound.Beep(self.frequency, self.duration)
-
+              #Cargo video tutorial
               win32gui.ShowWindow(self.reproductorPID, win32con.SW_MAXIMIZE)
-              #win32gui.SetForegroundWindow(self.portadaPID)
-              
+              self.media = self.instance.media_new(self.PATH_VIDEOS_TUTORIAL)
+              self.player.set_media(self.media)
+              sleep(0.1)
+              self.player.play()
+              sleep(0.1)
+              self.reproductorPID=win32gui.GetForegroundWindow() 
+              sleep(0.01)
+              win32gui.ShowWindow(self.reproductorPID, win32con.SW_MAXIMIZE)
+              win32gui.SetForegroundWindow(self.reproductorPID)
+              self.statePlayer = self.STATE_TUTORIAL
+              self.pause=False
+
+        elif self.statePlayer == self.STATE_TUTORIAL:
+            #Si termina el tutorial cargo un nuevo video
+            state = self.media.get_state()
+            if str(state) == 'State.Ended':
+              #Cargo una nueva pelicula  
+              win32gui.ShowWindow(self.reproductorPID, win32con.SW_MAXIMIZE)
+      
               if self.Genero=="Adultos":
                 r=random.randrange(1, len(self.listaAdultos)-1) 
                 for i in range(r):
                   n= next(self.listaVideosAdultos)
-                pathVideo = os.path.join(self.PATH_VIDEOS_ADULTOS, n)
-
+                pathVideo = os.path.join(self.PATH_VIDEOS_ADULTOS, n)  
               if self.Genero=="Menores":
                 r=random.randrange(1, len(self.listaMenores)-1) 
                 for i in range(r):
                   n= next(self.listaVideosMenores)
-                pathVideo = os.path.join(self.PATH_VIDEOS_MENORES, n)             
-
+                pathVideo = os.path.join(self.PATH_VIDEOS_MENORES, n)               
               print("Cargo pelicula:",pathVideo)
               self.media = self.instance.media_new(pathVideo)
-              
-
+                
               self.player.set_media(self.media)
               
               sleep(0.1)
-              #exit(1)
               self.player.play()
               sleep(0.1)
               self.reproductorPID=win32gui.GetForegroundWindow() 
               print("Reproductor al crearlo:",self.reproductorPID)
               self.player.pause() 
               self.pause=True
-              self.media = self.player.get_media()
-
+              self.media = self.player.get_media()  
               g = vlc.VideoLogoOption 
               self.player.video_set_logo_int(g.logo_enable, 1)
               self.player.video_set_logo_int(g.logo_opacity, 255)  # 0-255               
               self.player.video_set_logo_string(g.logo_file, self.logostr) 
               self.player.video_set_logo_int(g.logo_position,6)
               self.player.video_set_logo_int(g.logo_x,self.xyLogo)    
-              self.player.video_set_logo_int(g.logo_y,self.xyLogo)  
-
-              '''self.reproductorPID=0
-              #Obtengo los PID de los vlc
-              top_windows = []
-              win32gui.EnumWindows(windowEnumerationHandler, top_windows)
-              for i in top_windows:
-                #print(i)
-                if self.vlcName in i[1] or self.vlcName2 in i[1]:
-                    self.reproductorPID=i[0]
-                    #win32gui.ShowWindow(i[0],5)
-                    break
-
-              print("Reproductor nuevo buscado:",self.reproductorPID)'''
-
+              self.player.video_set_logo_int(g.logo_y,self.xyLogo)    
               sleep(0.01)
               win32gui.ShowWindow(self.reproductorPID, win32con.SW_MAXIMIZE)
               win32gui.SetForegroundWindow(self.reproductorPID)
-              
-
+                
               self.statePlayer = self.STATE_PELICULA
-              sleep(0.05)
-
+              sleep(0.05)  
               self.player.play()
               self.pause=False
-              #self.playerplay()
-              
-
+                
         elif self.statePlayer == self.STATE_PELICULA:  
-            #Si el video termina cargo nueva portada
-            state = self.media.get_state()
-            if str(state) == 'State.Ended':
+                #Si el video termina cargo portada
+                state = self.media.get_state()
+                if str(state) == 'State.Ended':
+                      
+                  self.analisis=False
+                  self.personasTotales=0
+                  #Cargo portada
+                  pathPortada='imagenes/portada.jpg'
+                  self.media = self.instance.media_new(pathPortada)
+                
+                  print("Cargo portada:",pathPortada)
+                  self.player.set_media(self.media)
+                  self.player.play()
+                  sleep(0.1)
+                  self.reproductorPID=win32gui.GetForegroundWindow() 
+                  print("Reproductor al crearlo:",self.reproductorPID)
+                  self.player.pause() 
+                  self.pause=True
+                  self.player.set_time(8000)
+                  self.media = self.player.get_media()            
                   
-              self.analisis=False
-              self.personasTotales=0
-              #Cargo una nueva portada
-              #win32gui.ShowWindow(self.portadaPID, win32con.SW_HIDE)
-              
-              #win32gui.ShowWindow(self.appPrincipalPID, win32con.SW_SHOW)
-              pathPortada='imagenes/portada.jpg'
-              self.media = self.instance.media_new(pathPortada)
-            
-              print("Cargo portada:",pathPortada)
-              self.player.set_media(self.media)
-              self.player.play()
-              sleep(0.1)
-              self.reproductorPID=win32gui.GetForegroundWindow() 
-              print("Reproductor al crearlo:",self.reproductorPID)
-              self.player.pause() 
-              self.pause=True
-              self.player.set_time(8000)
-              self.media = self.player.get_media()            
-              
-              g = vlc.VideoLogoOption 
-              self.player.video_set_logo_int(g.logo_enable, 1)
-              self.player.video_set_logo_int(g.logo_opacity, 255)  # 0-255               
-              self.player.video_set_logo_string(g.logo_file, self.logostr) 
-              self.player.video_set_logo_int(g.logo_position,6)    
-              self.player.video_set_logo_int(g.logo_x,self.xyLogo)    
-              self.player.video_set_logo_int(g.logo_y,self.xyLogo)   
-
-              #sleep(0.1)
-              '''self.reproductor=0
-              #Obtengo el PID del vlc
-              top_windows = []
-              win32gui.EnumWindows(windowEnumerationHandler, top_windows)
-              for i in top_windows:
-                #print(i)
-                if self.vlcName in i[1] or self.vlcName2 in i[1]:
-                   self.reproductorPID=i[0]
-                   #win32gui.ShowWindow(i[0],5)
-                   break
-
-              print("Reproductor nuevo buscado:",self.reproductorPID)'''
-
-              sleep(0.1)
-              win32gui.ShowWindow(self.reproductorPID, win32con.SW_MAXIMIZE)
-              win32gui.SetForegroundWindow(self.reproductorPID)
-              self.statePlayer = self.STATE_PORTADA
+                  g = vlc.VideoLogoOption 
+                  self.player.video_set_logo_int(g.logo_enable, 1)
+                  self.player.video_set_logo_int(g.logo_opacity, 0)  # 0-255               
+                  self.player.video_set_logo_string(g.logo_file, self.logostr) 
+                  self.player.video_set_logo_int(g.logo_position,6)    
+                  self.player.video_set_logo_int(g.logo_x,self.xyLogo)    
+                  self.player.video_set_logo_int(g.logo_y,self.xyLogo)   
+    
+                  sleep(0.1)
+                  win32gui.ShowWindow(self.reproductorPID, win32con.SW_MAXIMIZE)
+                  win32gui.SetForegroundWindow(self.reproductorPID)
+                  self.statePlayer = self.STATE_PORTADA
 
         personasAdetectar=1
         if self.forzarPausa==False:
@@ -743,11 +693,11 @@ class MyFrame(wx.Frame):
                    self.player.pause()
                    self.pause=False
       
-               if self.statePlayer == self.STATE_PELICULA and self.personasTotales<personasAdetectar and self.pause==False:
+               if (self.statePlayer == self.STATE_PELICULA or self.statePlayer == self.STATE_TUTORIAL) and self.personasTotales<personasAdetectar and self.pause==False:
                  self.player.pause()
                  self.pause=True
                else:
-                 if self.statePlayer == self.STATE_PELICULA and self.personasTotales==personasAdetectar and self.pause==True:
+                 if (self.statePlayer == self.STATE_PELICULA or self.statePlayer == self.STATE_TUTORIAL) and self.personasTotales==personasAdetectar and self.pause==True:
                      self.player.pause()
                      self.pause=False
        
@@ -755,9 +705,10 @@ class MyFrame(wx.Frame):
         #print("Camara PID:",self.camaraPID)
         win32gui.SetForegroundWindow(self.camaraPID) 
 
+        #sleep(100)
         #Para traer al frente el AppPrincipal
         win32gui.SetForegroundWindow(self.appPrincipalPID)
-        #win32gui.ShowWindow(self.appPrincipalPID, win32con.SW_HIDE)
+        win32gui.ShowWindow(self.appPrincipalPID, win32con.SW_HIDE)
           
         self.timer.Start(1000./self.fps)
         event.Skip()
@@ -810,12 +761,12 @@ class MyFrame(wx.Frame):
          self.Close(True)
 
       if keycode == wx.WXK_ALT:
-         winsound.Beep(self.frequency, self.duration)
+         #winsound.Beep(self.frequency, self.duration)
          self.is_mute = self.player.audio_get_mute()
          self.player.audio_set_mute(not self.is_mute)
 
       if keycode == wx.WXK_SHIFT:  
-         winsound.Beep(self.frequency, self.duration) 
+         #winsound.Beep(self.frequency, self.duration) 
          self.player.set_time(self.player.get_length())
 
       if keycode == wx.WXK_F1:  
