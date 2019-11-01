@@ -187,13 +187,7 @@ class MyFrame(wx.Frame):
         ipcamDesc = 'Celular'
         ipcam[ipcamDesc] = urlparse(ipcamUrl)
         print(time.now())
-        
-        # Prueba la conexión al destino ip
-        '''if len(ipcamUrl) > 5:
-          err,errMsg = self.urlTest(ipcam[ipcamDesc].hostname,ipcam[ipcamDesc].port)
-          if err > 0:
-              print(time.now(),"Falló conexión. ",errMsg)
-              exit(1)'''
+
         
         try:
           #self.capture = cv2.VideoCapture(ipcamUrl)
@@ -290,13 +284,11 @@ class MyFrame(wx.Frame):
               self.camara = "Camera"
               cv2.namedWindow(self.camara, cv2.WINDOW_NORMAL)
 
-              
-
               cv2.setMouseCallback(self.camara, on_mouse, 0)
               cv2.setWindowProperty(self.camara, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
               sleep(0.1)
               cv2.resizeWindow(self.camara, 320,180)
-              cv2.moveWindow(self.camara, 0,0) 
+              cv2.moveWindow(self.camara, 16,16) 
               
               self.appPrincipal = "AppPrincipal"
 
